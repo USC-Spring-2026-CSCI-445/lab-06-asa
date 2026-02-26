@@ -51,13 +51,39 @@ class PIDController:
         assert u_min < u_max, "u_min should be less than u_max"
         # initialize PID variables here
         ######### Your code starts here #########
-
+        self.kP = kP
+        self.kI = kI
+        self.kD = kD
+        self.kS = kS
+        self.u_min = u_min
+        self.u_max = u_max
+        self.t_prev = 0.0
+        self.err_prev = 0.0
+        self.integral = 0.0
         ######### Your code ends here #########
 
     def control(self, err, t):
         # compute PID control action here
         ######### Your code starts here #########
+        dt = t - self.t_prev
+        if dt <= 1e-6:
+            return 0
 
+        de = err - self.err_prev
+        derivative = de / dt
+        self.integral += err * dt
+
+        value = self.kP * err + self.kI * self.integral + self.kD * derivative + self.kS * (1 if err > 0.1 else -1 if err < -0.1 else 0)
+        
+        if value < self.u_min:
+            value = self.u_min
+        elif value > self.u_max:
+            value = self.u_max
+
+        self.t_prev = t
+        self.err_prev = err
+
+        return value
         ######### Your code ends here #########
 
 
@@ -115,7 +141,7 @@ class ObstacleFreeWaypointController:
 
         # define linear and angular PID controllers here
         ######### Your code starts here #########
-
+        self.p_rot = PIDController(2.0, 0.03, 0.01, 0.0, -1, 1)
         ######### Your code ends here #########
 
     def odom_callback(self, msg):
@@ -134,7 +160,11 @@ class ObstacleFreeWaypointController:
 
         # Calculate error in position and orientation
         ######### Your code starts here #########
-
+        dx = self.goal_position["x"] - self.current_position["x"]
+        dy = self.goal_position["y"] - self.current_position["y"]
+        distance_error = math.sqrt(dx**2 + dy**2)
+        theta_desired = math.atan2(dy, dx)
+        angle_error = theta_desired - self.current_position["theta"]
         ######### Your code ends here #########
 
         return distance_error, angle_error
@@ -150,7 +180,21 @@ class ObstacleFreeWaypointController:
 
             # Travel through waypoints one at a time, checking if robot is close enough
             ######### Your code starts here #########
+            distance_error, angle_error = error
+            t = rospy.get_time()
+    
+            if distance_error < 0.05:
+                ctrl_msg.linear.x = 0.0
+                ctrl_msg.angular.z = 0.0
+            else:
+                ctrl_msg.linear.x = 0.2
+    
+            if abs(angle_error) > 0.5:
+                ctrl_msg.angular.z = self.p_rot.control(angle_error, t)
+            else:
+                ctrl_msg.angular.z = 0
 
+            self.vel_pub.publish(ctrl_msg)
             ######### Your code ends here #########
             rate.sleep()
 
