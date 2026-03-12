@@ -308,7 +308,7 @@ class ObstacleAvoidingWaypointController:
         ######### Your code starts here #########
         # self.wall_follow_controller = PDController(2.0, 0.25, 0.4, -1.5, 1.5)
         # PID: kP, kI, kD, kS, u_min, u_max
-        self.wall_follow_controller = PIDController(2.5, 0.05, 0.1, 0, -1.5, 1.5)
+        self.wall_follow_controller = PIDController(2.5, 0.05, 0.1, 0, -2, 2)
         self.goal_angular_controller = PIDController(2.0, 0.01, 0.03, 0.4, -1.5, 1.5)
 
         self.in_obstacle_avoidance = False
