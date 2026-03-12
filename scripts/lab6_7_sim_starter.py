@@ -129,9 +129,9 @@ class PDController:
         ######### Your code ends here #########
 
     def control(self, err, t):
-        dt = t - self.t_prev
         # Compute PD control action here
         ######### Your code starts here #########
+        dt = 0
         if self.t_prev is None:
             dt = None
         else:
@@ -139,10 +139,14 @@ class PDController:
             if dt <= 0:
                 dt = None
 
+        dt = t - self.t_prev
+        
         if dt is None:
             derivative = 0.0
         else:
             derivative = (err - self.err_prev) / dt
+
+        
 
         u = self.kP * err + self.kD * derivative
 
@@ -400,7 +404,7 @@ class ObstacleAvoidingWaypointController:
 
         if ir_filtered is None or ir_filtered > 1.5:
             # find the wall: turn right while moving forward (searching)
-            ctrl_msg.angular.z = 0.3
+            ctrl_msg.angular.z = -0.3
             ctrl_msg.linear.x = self.v0
             self.robot_ctrl_pub.publish(ctrl_msg)
             return
