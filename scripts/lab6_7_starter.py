@@ -17,9 +17,9 @@ from std_msgs.msg import ColorRGBA
 
 OBS_FREE_WAYPOINTS = [
     {"x": 0.5, "y": 0},
-    {"x": 0.5, "y": 0.8},
     {"x": 1, "y": 1},
-    {"x": 1.5, "y": 0},
+    {"x": 1.3, "y": 1.5},
+    {"x": 2, "y": 0},
 ]
 
 W_OBS_WAYPOINTS = [
