@@ -55,7 +55,7 @@ class PIDController:
         self.kI = kI
         self.kD = kD
         # clamp magnitude for integral term
-        self.i_clamp = abs(i_clamp)
+        self.i_clamp = abs(kS)
         self.u_min = u_min
         self.u_max = u_max
 
@@ -250,7 +250,7 @@ class ObstacleFreeWaypointController:
                 # stop robot 
                 ctrl_msg.linear.x = 0.0
                 ctrl_msg.angular.z = 0.0
-                self.robot_ctrl_pub.publish(ctrl_msg)
+                # self.robot_ctrl_pub.publish(ctrl_msg)
                 rospy.loginfo("All waypoints reached!")
                 break
             
