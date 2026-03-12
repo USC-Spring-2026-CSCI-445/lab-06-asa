@@ -515,10 +515,10 @@ class ObstacleAvoidingWaypointController:
         return filtered
 
     def control_robot(self):
-        rate = rospy.Rate(10)  # 20 Hz
+        rate = rospy.Rate(20)  # 20 Hz
 
         current_waypoint_idx = 0
-        distance_from_wall_safety = 2.0
+        distance_from_wall_safety = 1.5
         cone_angle = radians(5)
 
         while not rospy.is_shutdown():
