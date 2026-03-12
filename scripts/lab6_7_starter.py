@@ -16,9 +16,10 @@ from std_msgs.msg import ColorRGBA
 
 
 OBS_FREE_WAYPOINTS = [
+    {"x": 0, "y": 1},
     {"x": 1, "y": 1},
-    {"x": 2, "y": 1},
-    {"x": 1, "y": 0},
+    {"x": 1, "y": 1.2},
+    {"x": 0, "y": 2},
 ]
 
 W_OBS_WAYPOINTS = [
@@ -83,22 +84,22 @@ class PDController:
         ######### Your code ends here #########
 
 
-def publish_waypoints(waypoints: List[Dict], publisher: rospy.Publisher):
-    marker_array = MarkerArray()
-    for i, waypoint in enumerate(waypoints):
-        marker = Marker()
-        marker.header.frame_id = "odom"
-        marker.header.stamp = rospy.Time.now()
-        marker.ns = "waypoints"
-        marker.id = i
-        marker.type = Marker.CYLINDER
-        marker.action = Marker.ADD
-        marker.pose.position = Point(waypoint["x"], waypoint["y"], 0.0)
-        marker.pose.orientation = Quaternion(0, 0, 0, 1)
-        marker.scale = Vector3(0.1, 0.1, 0.1)
-        marker.color = ColorRGBA(0.0, 1.0, 0.0, 0.5)
-        marker_array.markers.append(marker)
-    publisher.publish(marker_array)
+    def publish_waypoints(waypoints: List[Dict], publisher: rospy.Publisher):
+        marker_array = MarkerArray()
+        for i, waypoint in enumerate(waypoints):
+            marker = Marker()
+            marker.header.frame_id = "odom"
+            marker.header.stamp = rospy.Time.now()
+            marker.ns = "waypoints"
+            marker.id = i
+            marker.type = Marker.CYLINDER
+            marker.action = Marker.ADD
+            marker.pose.position = Point(waypoint["x"], waypoint["y"], 0.0)
+            marker.pose.orientation = Quaternion(0, 0, 0, 1)
+            marker.scale = Vector3(0.1, 0.1, 0.1)
+            marker.color = ColorRGBA(0.0, 1.0, 0.0, 0.5)
+            marker_array.markers.append(marker)
+        publisher.publish(marker_array)
 
 
 # Class for controlling the robot to reach a goal position
