@@ -131,7 +131,6 @@ class PDController:
     def control(self, err, t):
         # Compute PD control action here
         ######### Your code starts here #########
-        dt = 0
         if self.t_prev is None:
             dt = None
         else:
@@ -139,14 +138,10 @@ class PDController:
             if dt <= 0:
                 dt = None
 
-        dt = t - self.t_prev
-        
         if dt is None:
             derivative = 0.0
         else:
             derivative = (err - self.err_prev) / dt
-
-        
 
         u = self.kP * err + self.kD * derivative
 
@@ -156,6 +151,7 @@ class PDController:
         elif u < self.u_min:
             u = self.u_min
 
+        # update state
         self.t_prev = t
         self.err_prev = err
         return u
@@ -522,7 +518,7 @@ class ObstacleAvoidingWaypointController:
         rate = rospy.Rate(10)  # 20 Hz
 
         current_waypoint_idx = 0
-        distance_from_wall_safety = 1.0
+        distance_from_wall_safety = 2.0
         cone_angle = radians(5)
 
         while not rospy.is_shutdown():
