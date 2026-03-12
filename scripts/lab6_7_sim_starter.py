@@ -69,41 +69,29 @@ class PIDController:
         # compute PID control action here
         ######### Your code starts here #########
         if self.t_prev is None:
-            dt = None
-        else:
-            dt = t - self.t_prev
-            if dt <= 0:
-                dt = None
+            self.t_prev = t
+            self.err_prev = err
+            return 0.0
 
-        # derivative
-        if dt is None:
-            derivative = 0.0
-        else:
-            derivative = (err - self.err_prev) / dt
+        dt = t - self.t_prev
+        if dt <= 1e-6:
+            return 0.0
 
-        # integral
-        if dt is not None:
-            self.integral += err * dt
-            # clamp integral to avoid windup
-            if self.integral > self.i_clamp:
-                self.integral = self.i_clamp
-            elif self.integral < -self.i_clamp:
-                self.integral = -self.i_clamp
+        self.err_int += err * dt
+        derr = (err - self.err_prev) / dt
 
-        # PID output (no anti-windup beyond clamp above)
-        u = self.kP * err + self.kI * self.integral + self.kD * derivative
+        u = self.kP * err + self.kI * self.err_int + self.kD * derr
 
-        # saturate final command
-        if u > self.u_max:
-            u = self.u_max
-        elif u < self.u_min:
-            u = self.u_min
+        if abs(u) > 1e-9:
+            u += self.kS * (1.0 if u > 0 else -1.0)
 
-        # update state
-        self.t_prev = t
+        u_sat = max(self.u_min, min(self.u_max, u))
+        if u_sat != u:
+            self.err_int -= err * dt 
+
         self.err_prev = err
-
-        return u
+        self.t_prev = t
+        return u_sat        
         ######### Your code ends here #########
 
 
@@ -306,9 +294,9 @@ class ObstacleAvoidingWaypointController:
 
         # Add PID controllers here for obstacle avoidance and waypoint following
         ######### Your code starts here #########
-        # self.wall_follow_controller = PDController(2.0, 0.25, 0.4, -1.5, 1.5)
+        self.wall_follow_controller = PDController(2.0, 0.25, 0.4, -1.5, 1.5)
         # PID: kP, kI, kD, kS, u_min, u_max
-        self.wall_follow_controller = PIDController(2.0, 1, 1.5, 0.4, -1.5, 1.5)
+        # self.wall_follow_controller = PIDController(2.0, 1, 1.5, 0.4, -1.5, 1.5)
         self.goal_angular_controller = PIDController(2.0, 0.01, 0.03, 0.4, -1.5, 1.5)
 
         self.in_obstacle_avoidance = False
