@@ -103,7 +103,6 @@ class PDController:
         # Initialize PD variables here
         ######### Your code starts here #########
         self.kP = kP
-        self.kI = kI
         self.kD = kD
         self.kS = kS
         self.u_min = u_min
