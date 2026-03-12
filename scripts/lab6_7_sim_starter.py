@@ -15,20 +15,16 @@ from std_msgs.msg import ColorRGBA
 
 
 OBS_FREE_WAYPOINTS = [
-    {"x": 0, "y": 1},
     {"x": 1, "y": 1},
-    {"x": 1, "y": 1.2},
-    {"x": 0, "y": 2},
+    {"x": 2, "y": 1},
+    {"x": 1, "y": 0},
 ]
 
 W_OBS_WAYPOINTS = [
     {"x": 1.5, "y": 1.5},
-    {"x": 2.2, "y": 1},
-    {"x": 2.2, "y": 0.5},
-    {"x": 2.4, "y": 0.5},
-    {"x": 2.5, "y": 0},
+    {"x": 4, "y": 1},
+    {"x": 0, "y": 3.0},
 ]
-
 
 def angle_to_0_to_2pi(angle: float) -> float:
     while angle < 0:
@@ -57,8 +53,7 @@ class PIDController:
         self.kP = kP
         self.kI = kI
         self.kD = kD
-        # clamp magnitude for integral term
-        self.i_clamp = abs(kS)
+        self.kS = kS
         self.u_min = u_min
         self.u_max = u_max
 
@@ -88,10 +83,10 @@ class PIDController:
         if dt is not None:
             self.integral += err * dt
             # clamp integral to avoid windup
-            if self.integral > self.i_clamp:
-                self.integral = self.i_clamp
-            elif self.integral < -self.i_clamp:
-                self.integral = -self.i_clamp
+            if self.integral > abs(self.kS):
+                self.integral = abs(self.kS)
+            elif self.integral < -abs(self.kS):
+                self.integral = -abs(self.kS)
 
         # PID output (no anti-windup beyond clamp above)
         u = self.kP * err + self.kI * self.integral + self.kD * derivative
