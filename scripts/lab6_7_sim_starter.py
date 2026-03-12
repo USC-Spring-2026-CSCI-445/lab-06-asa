@@ -409,9 +409,9 @@ class ObstacleAvoidingWaypointController:
         ######### Your code ends here #########
 
         self.robot_ctrl_pub.publish(ctrl_msg)
-        print(
-            f"dist: {round(self.ir_distance, 4)}\ttgt: {round(self.wall_following_desired_distance, 4)}\tu: {round(u, 4)}"
-        )
+        # print(
+        #     f"dist: {round(self.ir_distance, 4)}\ttgt: {round(self.wall_following_desired_distance, 4)}\tu: {round(u, 4)}"
+        # )
 
     def laserscan_distances_to_point(self, point: Dict, cone_angle: float, visualize: bool = False):
         """Returns the laserscan distances within the cone of angle `cone_angle` centered about the line pointing from
