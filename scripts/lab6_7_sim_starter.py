@@ -246,7 +246,7 @@ class ObstacleFreeWaypointController:
                 continue
             
             t = rospy.get_time()
-            omega = self.angular_controller.control(angle_error, t) #calls the control method in the PID controller class that internally computes ω = kP*error + kI*integral + kD*derivative
+            omega = self.p_rot.control(angle_error, t) #calls the control method in the PID controller class that internally computes ω = kP*error + kI*integral + kD*derivative
             ctrl_msg.angular.z = omega
             ctrl_msg.linear.x = self.v0
             
