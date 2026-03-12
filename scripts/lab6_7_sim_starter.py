@@ -63,6 +63,7 @@ class PIDController:
         self.t_prev = None
         self.err_prev = 0.0
         self.integral = 0.0
+        self.err_int = 0.0
         ######### Your code ends here #########
 
     def control(self, err, t):
