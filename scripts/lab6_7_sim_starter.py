@@ -54,10 +54,13 @@ class PIDController:
         self.kP = kP
         self.kI = kI
         self.kD = kD
-        self.kS = kS
+        # clamp magnitude for integral term
+        self.i_clamp = abs(i_clamp)
         self.u_min = u_min
         self.u_max = u_max
-        self.t_prev = 0.0
+
+        # internal state
+        self.t_prev = None
         self.err_prev = 0.0
         self.integral = 0.0
         ######### Your code ends here #########
@@ -65,28 +68,40 @@ class PIDController:
     def control(self, err, t):
         # compute PID control action here
         ######### Your code starts here #########
-        dt = t - self.t_prev
-        
-        #compute derivative
-        if self.t_prev == 0.0 or dt <= 0:
+        if self.t_prev is None:
+            dt = None
+        else:
+            dt = t - self.t_prev
+            if dt <= 0:
+                dt = None
+
+        # derivative
+        if dt is None:
             derivative = 0.0
         else:
-            derivative = (err - self.e_prev)/dt
+            derivative = (err - self.err_prev) / dt
 
-        
-        #compute integral
-        if dt > 0:
+        # integral
+        if dt is not None:
             self.integral += err * dt
+            # clamp integral to avoid windup
+            if self.integral > self.i_clamp:
+                self.integral = self.i_clamp
+            elif self.integral < -self.i_clamp:
+                self.integral = -self.i_clamp
 
-        #clamp integral
-        self.integral = max(-self.kS, min(self.integral, self.kS))
+        # PID output (no anti-windup beyond clamp above)
+        u = self.kP * err + self.kI * self.integral + self.kD * derivative
 
-        #compute u 
-        u = self.kP*err + self.kI*self.integral + self.kD*derivative
-        u = max(self.u_min, min(u, self.u_max))
+        # saturate final command
+        if u > self.u_max:
+            u = self.u_max
+        elif u < self.u_min:
+            u = self.u_min
 
+        # update state
         self.t_prev = t
-        self.e_prev = err
+        self.err_prev = err
 
         return u
         ######### Your code ends here #########
@@ -104,12 +119,12 @@ class PDController:
         ######### Your code starts here #########
         self.kP = kP
         self.kD = kD
-        self.kS = kS
         self.u_min = u_min
         self.u_max = u_max
-        self.t_prev = 0.0
+
+        # internal state
+        self.t_prev = None
         self.err_prev = 0.0
-        self.integral = 0.0
 
         ######### Your code ends here #########
 
@@ -117,19 +132,28 @@ class PDController:
         dt = t - self.t_prev
         # Compute PD control action here
         ######### Your code starts here #########
-        if self.t_prev == 0.0 or dt <= 0:
+        if self.t_prev is None:
+            dt = None
+        else:
+            dt = t - self.t_prev
+            if dt <= 0:
+                dt = None
+
+        if dt is None:
             derivative = 0.0
         else:
-            derivative = (err - self.e_prev)/dt
+            derivative = (err - self.err_prev) / dt
 
-        
         u = self.kP * err + self.kD * derivative
-        if u < self.u_min:
-            u = self.u_min
-        elif u > self.u_max:
+
+        # saturate
+        if u > self.u_max:
             u = self.u_max
+        elif u < self.u_min:
+            u = self.u_min
+
         self.t_prev = t
-        self.e_prev = err
+        self.err_prev = err
         return u
 
         ######### Your code ends here #########
@@ -285,6 +309,11 @@ class ObstacleAvoidingWaypointController:
         self.wall_follow_controller = PDController(1.0, 0.25, 0.4, -1.5, 1.5)
         self.goal_angular_controller = PIDController(2.0, 0.01, 0.03, 0.4, -1.5, 1.5)
 
+        self.in_obstacle_avoidance = False
+        self.obstacle_clear_count = 0
+        # small smoothing buffer for IR
+        self._ir_buf = []
+
         self.v0 = 0.1 # base velocity
 
         ######### Your code ends here #########
@@ -360,27 +389,42 @@ class ObstacleAvoidingWaypointController:
         ctrl_msg = Twist()
 
         ######### Your code starts here #########
-        if self.laserscan_angles is not None:
-            n = len(self.laserscan.ranges)
-            rospy.loginfo_once(f"Total scan ranges: {n}, angle at index 90: {degrees(self.laserscan_angles[90]):.1f} deg")
+        if self.ir_distance is not None:
+            self._ir_buf.append(self.ir_distance)
+            # keep small window
+            if len(self._ir_buf) > 5:
+                self._ir_buf.pop(0)
+            ir_filtered = sum(self._ir_buf) / len(self._ir_buf)
+        else:
+            ir_filtered = None
 
-        if self.laserscan is not None:
-            raw_left = list(self.laserscan.ranges[80:100])
-            print(f"ir_dist={self.ir_distance}  raw[80:100]={[round(x,2) for x in raw_left[:5]]}...")
-
-        if self.ir_distance is None or self.ir_distance > 1.5:
-            # wall not on left yet — move forward while turning right to find it
-            ctrl_msg.angular.z = -0.3
+        if ir_filtered is None or ir_filtered > 1.5:
+            # find the wall: turn right while moving forward (searching)
+            ctrl_msg.angular.z = 0.3
             ctrl_msg.linear.x = self.v0
             self.robot_ctrl_pub.publish(ctrl_msg)
-            print("Turning right to find wall on left side...")
             return
 
-        err = self.wall_following_desired_distance - self.ir_distance
+        # IMPORTANT: make err = (measured - desired)
+        # so positive error -> turn left (positive angular.z)
+        err = ir_filtered - self.wall_following_desired_distance
         t = rospy.get_time()
         u = self.wall_follow_controller.control(err, t)
+
+        # optional: rate-limit angular command (small change per step)
+        max_delta = 0.5  # rad/s per loop (tunable)
+        prev_ang = getattr(self, "_prev_angular_cmd", 0.0)
+        # clamp delta
+        delta = u - prev_ang
+        if delta > max_delta:
+            u = prev_ang + max_delta
+        elif delta < -max_delta:
+            u = prev_ang - max_delta
+        self._prev_angular_cmd = u
+
         ctrl_msg.linear.x = self.v0
-        ctrl_msg.angular.z = u  # don't negate because u is already a negative value !
+        ctrl_msg.angular.z = u
+        self.robot_ctrl_pub.publish(ctrl_msg)
 
 
         ######### Your code ends here #########
@@ -500,21 +544,24 @@ class ObstacleAvoidingWaypointController:
 
             distances = self.laserscan_distances_to_point(goal, cone_angle)
             obstacle_detected = len(distances) > 0 and min(distances) < distance_from_wall_safety
-            in_obstacle_avoidance = False
 
-            # enter obstacle avoidance mode
-            if obstacle_detected:
-                in_obstacle_avoidance = True
-                obstacle_clear_count = 0
+            if obstacle_detected and not self.in_obstacle_avoidance:
+                self.in_obstacle_avoidance = True
+                self.obstacle_clear_count = 0
                 rospy.loginfo("Obstacle detected! Switching to wall following.")
+
+            if self.in_obstacle_avoidance:
                 self.obstacle_avoiding_control()
-            elif in_obstacle_avoidance:
-                obstacle_clear_count += 1
-                if obstacle_clear_count >= 20:
-                    in_obstacle_avoidance = False
-                    rospy.loginfo("Obstacle cleared! Resuming waypoint tracking.")
+                # check clear condition (use filtered ir_distance or laserscan cone)
+                if distances is None or len(distances) == 0 or min(distances) > distance_from_wall_safety:
+                    self.obstacle_clear_count += 1
                 else:
-                    self.obstacle_avoiding_control()
+                    self.obstacle_clear_count = 0
+
+                if self.obstacle_clear_count >= 20:
+                    self.in_obstacle_avoidance = False
+                    self.obstacle_clear_count = 0
+                    rospy.loginfo("Obstacle cleared. Resuming waypoint tracking.")
             else:
                 result = self.waypoint_tracking_control(goal)
 
