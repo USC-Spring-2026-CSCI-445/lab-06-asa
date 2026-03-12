@@ -54,6 +54,7 @@ class PIDController:
         self.kP = kP
         self.kI = kI
         self.kD = kD
+        self.kS = kS
         # clamp magnitude for integral term
         self.i_clamp = abs(kS)
         self.u_min = u_min
