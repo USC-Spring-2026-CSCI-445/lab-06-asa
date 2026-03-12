@@ -314,7 +314,7 @@ class ObstacleAvoidingWaypointController:
         # small smoothing buffer for IR
         self._ir_buf = []
 
-        self.v0 = 0.1 # base velocity
+        self.v0 = 0.2 # base velocity
 
         ######### Your code ends here #########
 
