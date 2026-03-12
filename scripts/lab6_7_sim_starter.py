@@ -124,7 +124,10 @@ class PDController:
 
         
         u = self.kP * err + self.kD * derivative
-        u = max(self.u_min, min(u, self.u_max))
+        if u < self.u_min:
+            u = self.u_min
+        elif u > self.u_max:
+            u = self.u_max
         self.t_prev = t
         self.e_prev = err
         return u
@@ -279,17 +282,10 @@ class ObstacleAvoidingWaypointController:
 
         # Add PID controllers here for obstacle avoidance and waypoint following
         ######### Your code starts here #########
-        kP = 2.0
-        kD = 0.03
-        kI = 0.01
-        kS = 0.4
-        u_min = -1.5
-        u_max = 1.5
+        self.wall_follow_controller = PDController(1.0, 0.25, 0.4, -1.5, 1.5)
+        self.goal_angular_controller = PIDController(2.0, 0.01, 0.03, 0.4, -1.5, 1.5)
 
-        self.wall_follow_controller = PDController(kP=1.0, kD=0.25, kS=kS, u_min=-2, u_max=2)
-        self.goal_angular_controller = PIDController(kP=kP, kI=kI, kD=kD, kS=kS, u_min=u_min, u_max=u_max)
-
-        self.v0 = 0.1 #base forward velocity
+        self.v0 = 0.1 # base velocity
 
         ######### Your code ends here #########
 
@@ -355,7 +351,8 @@ class ObstacleAvoidingWaypointController:
         rospy.loginfo(
             f"distance to target: {distance_error:.2f}\tangle error: {angle_error:.2f}\tcommanded linear vel: {cmd_linear_vel:.2f}\tcommanded angular vel: {cmd_angular_vel:.2f}"
         )
-        ## added this as well: 
+        
+        # added this as well: 
         return distance_error
 
     def obstacle_avoiding_control(self, visualize: bool = True):
@@ -392,6 +389,9 @@ class ObstacleAvoidingWaypointController:
         print(
             f"dist: {round(self.ir_distance, 4)}\ttgt: {round(self.wall_following_desired_distance, 4)}\tu: {round(u, 4)}"
         )
+
+        # added this as well: 
+        return err
 
     def laserscan_distances_to_point(self, point: Dict, cone_angle: float, visualize: bool = False):
         """Returns the laserscan distances within the cone of angle `cone_angle` centered about the line pointing from
