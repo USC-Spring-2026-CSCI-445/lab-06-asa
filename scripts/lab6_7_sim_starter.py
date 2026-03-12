@@ -500,6 +500,7 @@ class ObstacleAvoidingWaypointController:
 
             distances = self.laserscan_distances_to_point(goal, cone_angle)
             obstacle_detected = len(distances) > 0 and min(distances) < distance_from_wall_safety
+            in_obstacle_avoidance = False
 
             # enter obstacle avoidance mode
             if obstacle_detected:
