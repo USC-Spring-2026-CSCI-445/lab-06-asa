@@ -192,7 +192,7 @@ class ObstacleFreeWaypointController:
 
         # define linear and angular PID controllers here
         ######### Your code starts here #########
-        self.p_rot = PIDController(2.0, 0.01, 0.03, 0.4, -1.5, 1.5)
+        self.p_rot = PIDController(, 0.01, 0.03, 0.4, -1.5, 1.5)
        
         self.v0 = 0.2 # base velocity to move forward
         ######### Your code ends here #########
@@ -307,7 +307,7 @@ class ObstacleAvoidingWaypointController:
         # Add PID controllers here for obstacle avoidance and waypoint following
         ######### Your code starts here #########
         # self.wall_follow_controller = PDController(1.0, 0.25, 0.4, -1.5, 1.5)
-        self.wall_follow_controller = PIDController(2.0, 0.01, 0.03, 0.4, -1.5, 1.5)
+        self.wall_follow_controller = PIDController(, 0.01, 0.03, 0.4, -1.5, 1.5)
         self.goal_angular_controller = PIDController(2.0, 0.01, 0.03, 0.4, -1.5, 1.5)
 
         self.in_obstacle_avoidance = False
@@ -315,7 +315,7 @@ class ObstacleAvoidingWaypointController:
         # small smoothing buffer for IR
         self._ir_buf = []
 
-        self.v0 = 0.2 # base velocity
+        self.v0 = 0.1 # base velocity
 
         ######### Your code ends here #########
 
