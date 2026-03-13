@@ -16,10 +16,9 @@ from std_msgs.msg import ColorRGBA
 
 
 OBS_FREE_WAYPOINTS = [
-    {"x": 0.5, "y": 0},
-    {"x": 1, "y": 0.9},
-    {"x": 1.15, "y": 0.9},
-    {"x": 2, "y": 0},
+    {"x": 1, "y": 1},
+    {"x": 2, "y": 1},
+    {"x": 1, "y": 0},
 ]
 
 W_OBS_WAYPOINTS = [
@@ -92,7 +91,6 @@ class PIDController:
             elif self.integral < -abs(self.kS):
                 self.integral = -abs(self.kS)
 
-        # PID output (no anti-windup beyond clamp above)
         u = self.kP * err + self.kI * self.integral + self.kD * derivative
 
         # saturate final command
@@ -199,7 +197,7 @@ class ObstacleFreeWaypointController:
         ######### Your code starts here #########
         self.p_rot = PIDController(2.0, 0.01, 0.03, 0.4, -1.5, 1.5)
     
-        self.v0 = 0.2 # base velocity to move forward
+        self.v0 = 0.2
 
         ######### Your code ends here #########
 
@@ -219,6 +217,7 @@ class ObstacleFreeWaypointController:
 
         # Calculate error in position and orientation
         ######### Your code starts here #########
+        # all lab 5 stuff
         dx = goal_position["x"] - self.current_position["x"]
         dy = goal_position["y"] - self.current_position["y"]
         
@@ -318,10 +317,9 @@ class ObstacleAvoidingWaypointController:
 
         self.in_obstacle_avoidance = False
         self.obstacle_clear_count = 0
-        # small smoothing buffer for IR
         self._ir_buf = []
 
-        self.v0 = 0.1 # base velocity
+        self.v0 = 0.1 # velo
 
         ######### Your code ends here #########
 
@@ -377,10 +375,9 @@ class ObstacleAvoidingWaypointController:
         ctrl_msg = Twist()
 
         t = rospy.get_time()
-        omega = self.goal_angular_controller.control(angle_error, t)
 
         cmd_linear_vel = self.v0
-        cmd_angular_vel = omega
+        cmd_angular_vel = self.goal_angular_controller.control(angle_error, t)
         ctrl_msg.angular.z = cmd_angular_vel
         ctrl_msg.linear.x = cmd_linear_vel
 
@@ -540,7 +537,6 @@ class ObstacleAvoidingWaypointController:
                 ctrl_msg.linear.x = 0.0
                 ctrl_msg.angular.z = 0.0
                 self.robot_ctrl_pub.publish(ctrl_msg)
-                rospy.loginfo("All waypoints reached!")
                 break
 
 
@@ -553,7 +549,6 @@ class ObstacleAvoidingWaypointController:
             if obstacle_detected and not self.in_obstacle_avoidance:
                 self.in_obstacle_avoidance = True
                 self.obstacle_clear_count = 0
-                rospy.loginfo("Obstacle detected! Switching to wall following.")
 
             if self.in_obstacle_avoidance:
                 self.obstacle_avoiding_control()
@@ -566,7 +561,6 @@ class ObstacleAvoidingWaypointController:
                 if self.obstacle_clear_count >= 20:
                     self.in_obstacle_avoidance = False
                     self.obstacle_clear_count = 0
-                    rospy.loginfo("Obstacle cleared. Resuming waypoint tracking.")
             else:
                 result = self.waypoint_tracking_control(goal)
 
@@ -575,7 +569,6 @@ class ObstacleAvoidingWaypointController:
                     continue
 
                 if result < 0.05:
-                    rospy.loginfo(f"Reached waypoint {current_waypoint_idx}: {goal}")
                     current_waypoint_idx += 1
     
 
